@@ -8,11 +8,15 @@ class QtApp < Qt::Widget
 		super
 
 		setWindowTitle "Startup manager"
+		setWindowFlags Qt::Tool
 
 		if File.exists?(ENV['HOME']+'/.startup-chooserrc') then
 			@progs = Hash.new("/usr/bin/xmessage unknown program")
+			@prognames = []
 			File.open(ENV['HOME']+'/.startup-chooserrc', 'r').each { |line|
-				@progs[line.gsub(/^(.*):.*$/, '\1').chomp] = line.gsub(/^.*:(.*)$/, '\1').chomp
+				progname,progcommand = line.strip.split(":")
+				@progs[progname] = progcommand
+				@prognames << progname
 			}
 		else
 			Qt::MessageBox.critical self, "Oops!", "It appears that you don't have a ~/.startup-chooserrc file.\nPlease create it first! The lines should be formatted as follows:\nprogram name 1:command to launch 1\nprogram name 2:command to launch 2\n..."
@@ -31,13 +35,11 @@ Thank you!",self)
 		vbox.addWidget info1
 
 		cbs = []
-		count = 0
-		@progs.each { |pn,pc|
-			count += 1
-			cbs << Qt::CheckBox.new(pn, self)
-			cbs[count-1].setChecked true
-			vbox.addWidget cbs[count-1]
-		}
+		@prognames.each_index do |i|
+			cbs << Qt::CheckBox.new(@prognames[i], self)
+			cbs[i].setChecked true
+			vbox.addWidget cbs[i]
+		end
 
 		okb = Qt::PushButton.new("OK",self)
 		okb.resize 80, 30
@@ -53,28 +55,22 @@ Thank you!",self)
 		setLayout vbox
 
 		connect(okb, SIGNAL('clicked()')) {
-			count = 0
-			@progs.each { |pn,pc|
-				if cbs[count].isChecked then
-					system(pc)
+			@prognames.each_index do |i|
+				if cbs[i].isChecked then
+					system(@progs[@prognames[i]]+'&')
 				end
-				count =+ 1
-			}
+			end
 			$qApp::quit()
 		}
 		connect(desb, SIGNAL('clicked()')) {
-			count = 0
-			@progs.each { |pn,pc|
-				cbs[count].setChecked false
-				count =+ 1
-			}
+			cbs.each_index do |i|
+				cbs[i].setChecked false
+			end
 		}
 		connect(selb, SIGNAL('clicked()')) {
-			count = 0
-			@progs.each { |pn,pc|
-				cbs[count].setChecked true
-				count =+ 1
-			}
+			cbs.each_index do |i|
+				cbs[i].setChecked true
+			end
 		}
 	end
 end
