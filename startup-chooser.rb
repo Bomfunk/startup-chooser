@@ -16,6 +16,7 @@ class QtApp < Qt::Widget
 			}
 		else
 			Qt::MessageBox.critical self, "Oops!", "It appears that you don't have a ~/.startup-chooserrc file.\nPlease create it first! The lines should be formatted as follows:\nprogram name 1:command to launch 1\nprogram name 2:command to launch 2\n..."
+			exit
 		end
 		init_ui
 		show
