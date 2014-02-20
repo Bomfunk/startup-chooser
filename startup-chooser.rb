@@ -50,8 +50,14 @@ Thank you!",self)
 
 		@cbs = []
 		@prognames.each_index do |i|
-			@cbs << Qt::CheckBox.new(@prognames[i], self)
-			@cbs[i].setChecked true
+			wcheck=true
+			pname=@prognames[i]
+			if pname[0] == "-" then
+				wcheck=false
+				pname=pname[1,pname.length]
+			end
+			@cbs << Qt::CheckBox.new(pname, self)
+			@cbs[i].setChecked wcheck
 			vbox.addWidget @cbs[i]
 		end
 

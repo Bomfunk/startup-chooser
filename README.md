@@ -10,4 +10,5 @@ The lines of the config should be formatted as follows:
     program name 2:command to launch 2
     ...
 
+If a line starts with "-", then the checkbox of this program will be not checked by default.
 You also can use one line to specify timeout in seconds, like "30". If there are several lines with numbers, the script will use the last one. There's no timeout by default.
