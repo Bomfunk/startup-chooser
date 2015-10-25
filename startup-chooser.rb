@@ -10,30 +10,36 @@ class QtApp < Qt::Widget
 		setWindowTitle "Startup manager"
 		setWindowFlags Qt::Tool
 
-		if File.exists?(ENV['HOME']+'/.startup-chooserrc') then
+		if File.exists?(ENV['HOME']+'/.startup-chooserrc')
 			@progs = Hash.new("/usr/bin/xmessage unknown program")
 			@prognames = []
 			@tseconds = 0
-			File.open(ENV['HOME']+'/.startup-chooserrc', 'r').each { |line|
-				if line.index(':') then
+			File.open(ENV['HOME']+'/.startup-chooserrc', 'r').each do |line|
+				if line.index(':')
 					progname,progcommand = line.strip.split(":")
 					@progs[progname] = progcommand
 					@prognames << progname
 				else
 					@tseconds = line.to_i
 				end
-			}
+			end
 		else
-			Qt::MessageBox.critical self, "Oops!", "It appears that you don't have a ~/.startup-chooserrc file.\nPlease create it first! The lines should be formatted as follows:\nprogram name 1:command to launch 1\nprogram name 2:command to launch 2\n...\n\nYou also can use one line to specify timeout in seconds, like \"30\".\nThere's no timeout by default."
+			Qt::MessageBox.critical self, "Oops!", ["It appears that you don't have a ~/.startup-chooserrc file.",
+										"Please create it first! The lines should be formatted as follows:",
+										"program name 1:command to launch 1",
+										"program name 2:command to launch 2","...\n",
+										"You also can use one line to specify timeout in seconds, like \"30\".",
+										"There's no timeout by default."].join("\n")
 			exit
 		end
 		init_ui
 		show
 	end
 
+	# Proceeding with launching the programs
 	def runstartup
 		@prognames.each_index do |i|
-			if @cbs[i].isChecked then
+			if @cbs[i].isChecked
 				system(@progs[@prognames[i]]+'&')
 			end
 		end
@@ -43,16 +49,17 @@ class QtApp < Qt::Widget
 	def init_ui
 		vbox = Qt::VBoxLayout.new
 		hbbox = Qt::HBoxLayout.new
-		info1 = Qt::Label.new("Hello!
-Please choose what programs do you want to run this time.
-Thank you!",self)
+		info1 = Qt::Label.new(["Hello!",
+					"Please choose what programs do you want to run this time.",
+					"Thank you!"].join("\n"),self)
 		vbox.addWidget info1
 
+		# Creating the checkboxes for each program
 		@cbs = []
 		@prognames.each_index do |i|
 			wcheck=true
 			pname=@prognames[i]
-			if pname[0] == "-" then
+			if pname[0] == "-"
 				wcheck=false
 				pname=pname[1,pname.length]
 			end
@@ -75,29 +82,20 @@ Thank you!",self)
 		setLayout vbox
 
 		timer = Qt::Timer.new
-		if @tseconds > 0 then
+		if @tseconds > 0
 			timer.start(1000)
 			tcount = @tseconds
 		end
 
-		connect(okb, SIGNAL('clicked()')){runstartup}
-		connect(desb, SIGNAL('clicked()')) {
-			@cbs.each_index do |i|
-				@cbs[i].setChecked false
-			end
-		}
-		connect(selb, SIGNAL('clicked()')) {
-			@cbs.each_index do |i|
-				@cbs[i].setChecked true
-			end
-		}
-		connect(timer, SIGNAL('timeout()')){
+		connect(okb, SIGNAL('clicked()')){ runstartup } # OK
+		connect(desb, SIGNAL('clicked()')) { @cbs.each {|i| i.setChecked false}	} # Deselect all
+		connect(selb, SIGNAL('clicked()')) { @cbs.each {|i| i.setChecked true} } # Select all
+		# Timer:
+		connect(timer, SIGNAL('timeout()')) do
 			tcount-=1
-			setWindowTitle "Startup manager ("+tcount.to_s+"s left)"
-			if tcount<1 then
-				runstartup
-			end
-		}
+			setWindowTitle "Startup manager (#{tcount.to_s}s left)"
+			if tcount<1 then runstartup end
+		end
 	end
 end
 
