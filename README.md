@@ -3,12 +3,22 @@ startup-chooser
 
 A qtruby script to launch at system startup and let you choose what programs to run this time.
 
-This script looks for ~/.startup-chooserrc as a file containing settings.
-The lines of the config should be formatted as follows:
+The script now only supports configuration file in Yaml format. If not found, it will generate one at ~/.config/startup-chooser.yaml.
+The syntax is pretty simple, but you need to keep the indentation (spaces before keys and values) as shown in the example:
 
-    program name 1:command to launch 1
-    program name 2:command to launch 2
-    ...
+    ---
+    timeout: 0
+    sort_names: true
+    programs:
+      ProgramName1:
+        cmd: "/usr/bin/xmessage prog1"
+      ProgramName2:
+        cmd: "/usr/bin/xmessage prog2"
+        enabled: false
+      ProgramName3:
+        cmd: "/usr/bin/xmessage prog3"
+        enabled: true
 
-If a line starts with "-", then the checkbox of this program will be not checked by default.
-You also can use one line to specify timeout in seconds, like "30". If there are several lines with numbers, the script will use the last one. There's no timeout by default.
+The "timeout" setting tells startup-chooser how much seconds it should wait before pressing "OK" automatically. Default is 0, which means timeout is disabled.
+The "sort_names" setting lets you automatically sort the program list to be shown by names.
+You can also set if you would like a program's checkbox to be enabled or disabled by default - use the "enabled" option for any program.

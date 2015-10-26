@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
 require 'Qt'
+require 'yaml'
 
 class QtApp < Qt::Widget
 
@@ -10,37 +11,39 @@ class QtApp < Qt::Widget
 		setWindowTitle "Startup manager"
 		setWindowFlags Qt::Tool
 
-		if File.exists?(ENV['HOME']+'/.startup-chooserrc')
-			@progs = Hash.new("/usr/bin/xmessage unknown program")
-			@prognames = []
-			@tseconds = 0
-			File.open(ENV['HOME']+'/.startup-chooserrc', 'r').each do |line|
-				if line.index(':')
-					progname,progcommand = line.strip.split(":")
-					@progs[progname] = progcommand
-					@prognames << progname
-				else
-					@tseconds = line.to_i
-				end
-			end
+		confdir = "#{ENV['HOME']}/.config"
+		confpath = "#{confdir}/startup-chooser.yaml"
+
+		if File.exists?(confpath)
+			@settings = YAML.load_file(confpath)
 		else
-			Qt::MessageBox.critical self, "Oops!", ["It appears that you don't have a ~/.startup-chooserrc file.",
-										"Please create it first! The lines should be formatted as follows:",
-										"program name 1:command to launch 1",
-										"program name 2:command to launch 2","...\n",
-										"You also can use one line to specify timeout in seconds, like \"30\".",
-										"There's no timeout by default."].join("\n")
-			exit
+			# Default settings
+			@settings = {"timeout"=> 0,
+						"sort_names" => true,
+						"programs"=> {
+							"ProgramName1"=> {"cmd"=> "/usr/bin/xmessage prog1"},
+							"ProgramName2"=> {"cmd"=> "/usr/bin/xmessage prog2", "enabled"=> false},
+							"ProgramName3"=> {"cmd"=> "/usr/bin/xmessage prog3", "enabled"=> true}
+							}
+						}
+			if not Dir.exists?(confdir) then Dir.mkdir(confdir) end
+			File.open(confpath, "w") {|f| f.write @settings.to_yaml }
+			Qt::MessageBox.information self, "Config file was generated",
+										["It looks like this is the first time startup-chooser was launched.",
+										"The configuration file was generated (\"#{confpath}\").",
+										"Please go ahead and change the configuration as you like,",
+										"but keep the Yaml syntax correct."].join("\n")
 		end
+
 		init_ui
 		show
 	end
 
 	# Proceeding with launching the programs
 	def runstartup
-		@prognames.each_index do |i|
-			if @cbs[i].isChecked
-				system(@progs[@prognames[i]]+'&')
+		@cbs.each do |cb|
+			if cb.isChecked and @settings["programs"][cb.text].has_key?("cmd")
+				system("#{@settings["programs"][cb.text]["cmd"]}&")
 			end
 		end
 		$qApp::quit()
@@ -56,16 +59,12 @@ class QtApp < Qt::Widget
 
 		# Creating the checkboxes for each program
 		@cbs = []
-		@prognames.each_index do |i|
-			wcheck=true
-			pname=@prognames[i]
-			if pname[0] == "-"
-				wcheck=false
-				pname=pname[1,pname.length]
-			end
-			@cbs << Qt::CheckBox.new(pname, self)
-			@cbs[i].setChecked wcheck
-			vbox.addWidget @cbs[i]
+		progs = @settings["programs"].keys
+		if @settings["sort_names"] then progs.sort! end
+		progs.each do |prog|
+			@cbs << Qt::CheckBox.new(prog, self)
+			@cbs.last.setChecked (not @settings["programs"][prog].has_key?("enabled") or @settings["programs"][prog]["enabled"])
+			vbox.addWidget @cbs.last
 		end
 
 		okb = Qt::PushButton.new("OK",self)
@@ -82,9 +81,9 @@ class QtApp < Qt::Widget
 		setLayout vbox
 
 		timer = Qt::Timer.new
-		if @tseconds > 0
+		if @settings["timeout"] > 0
 			timer.start(1000)
-			tcount = @tseconds
+			tcount = @settings["timeout"]
 		end
 
 		connect(okb, SIGNAL('clicked()')){ runstartup } # OK
