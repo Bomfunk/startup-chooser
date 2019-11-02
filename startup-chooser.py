@@ -5,7 +5,7 @@ import sys
 import yaml
 import os
 from PyQt5.QtWidgets import QWidget, QLabel, QApplication, QVBoxLayout, QHBoxLayout, QCheckBox, QMessageBox, QPushButton
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 class StartupChooser(QWidget):
 
@@ -35,6 +35,14 @@ class StartupChooser(QWidget):
       cbs.append(QCheckBox(prog,self))
       cbs[-1].setChecked(not "enabled" in settings["programs"][prog] or settings["programs"][prog]["enabled"])
       vbox.addWidget(cbs[-1])
+    
+    if settings["timeout"] != 0:
+      global tcount
+      tcount = settings["timeout"]
+      timer = QTimer(self)
+      timer.setSingleShot(False)
+      timer.timeout.connect(self.countDown)
+      timer.start(1000)
 
     okb = QPushButton("OK", self)
     hbox.addWidget(okb)
@@ -55,6 +63,13 @@ class StartupChooser(QWidget):
     self.setAttribute(Qt.WA_QuitOnClose)
 
     self.show()
+
+  def countDown(self):
+    global tcount
+    tcount-=1
+    self.setWindowTitle("Startup Chooser "+str(tcount)+"s left")
+    if tcount<1:
+      self.runstartup()
 
   def selectAll(self):
     for cb in cbs:
